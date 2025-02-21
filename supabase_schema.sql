@@ -539,4 +539,235 @@ begin
     set xp = v_current_xp + v_total_xp
     where user_id = p_user_id;
 end;
-$$ language plpgsql; 
+$$ language plpgsql;
+
+-- Create enum for rarity levels
+create type rarity_level as enum ('common', 'uncommon', 'rare', 'epic', 'legendary');
+
+-- Create badges table
+create table if not exists badges (
+    id uuid primary key default uuid_generate_v4(),
+    title text not null,
+    description text,
+    image_url text,
+    rarity rarity_level not null default 'common',
+    created_at timestamptz default now()
+);
+
+-- Create titles table
+create table if not exists titles (
+    id uuid primary key default uuid_generate_v4(),
+    title text not null,
+    description text,
+    rarity rarity_level not null default 'common',
+    created_at timestamptz default now()
+);
+
+-- Create user_badges table to track which badges users have earned
+create table if not exists user_badges (
+    id uuid primary key default uuid_generate_v4(),
+    user_id uuid not null references profiles(user_id),
+    badge_id uuid not null references badges(id),
+    is_equipped boolean default false,
+    earned_at timestamptz default now(),
+    unique(user_id, badge_id)
+);
+
+-- Create user_titles table to track which titles users have earned
+create table if not exists user_titles (
+    id uuid primary key default uuid_generate_v4(),
+    user_id uuid not null references profiles(user_id),
+    title_id uuid not null references titles(id),
+    is_equipped boolean default false,
+    earned_at timestamptz default now(),
+    unique(user_id, title_id)
+);
+
+-- Drop and recreate quest_rewards table
+drop table if exists quest_rewards cascade;
+
+-- Create quest_rewards table to link quests with their possible rewards
+create table if not exists quest_rewards (
+    id uuid primary key default uuid_generate_v4(),
+    quest_id uuid not null references quests(id),
+    xp_reward integer not null default 100, -- XP reward is mandatory with a default value
+    badge_id uuid references badges(id), -- Optional badge reward
+    title_id uuid references titles(id), -- Optional title reward
+    created_at timestamptz default now(),
+    check (
+        -- Ensure only one of badge or title can be awarded (or neither)
+        not (badge_id is not null and title_id is not null)
+    )
+);
+
+-- Create achievement_rewards table to link achievements with their rewards
+create table if not exists achievement_rewards (
+    id uuid primary key default uuid_generate_v4(),
+    achievement_id uuid not null references achievements(id),
+    badge_id uuid references badges(id),
+    title_id uuid references titles(id),
+    xp_reward integer,
+    created_at timestamptz default now(),
+    check (
+        (badge_id is not null and title_id is null and xp_reward is null) or
+        (badge_id is null and title_id is not null and xp_reward is null) or
+        (badge_id is null and title_id is null and xp_reward is not null)
+    )
+);
+
+-- Enable RLS on new tables
+alter table badges enable row level security;
+alter table titles enable row level security;
+alter table user_badges enable row level security;
+alter table user_titles enable row level security;
+alter table quest_rewards enable row level security;
+alter table achievement_rewards enable row level security;
+
+-- Create policies for badges
+create policy "Badges are viewable by everyone"
+    on badges for select
+    using (true);
+
+-- Create policies for titles
+create policy "Titles are viewable by everyone"
+    on titles for select
+    using (true);
+
+-- Create policies for user_badges
+create policy "Users can view their own badges"
+    on user_badges for select
+    using (auth.uid() = user_id);
+
+create policy "Users can update their equipped badges"
+    on user_badges for update
+    using (auth.uid() = user_id);
+
+-- Create policies for user_titles
+create policy "Users can view their own titles"
+    on user_titles for select
+    using (auth.uid() = user_id);
+
+create policy "Users can update their equipped titles"
+    on user_titles for update
+    using (auth.uid() = user_id);
+
+-- Create policies for quest_rewards
+create policy "Quest rewards are viewable by everyone"
+    on quest_rewards for select
+    using (true);
+
+-- Create policies for achievement_rewards
+create policy "Achievement rewards are viewable by everyone"
+    on achievement_rewards for select
+    using (true);
+
+-- Create storage bucket for badge images
+insert into storage.buckets (id, name, public) 
+values ('badge-images', 'badge-images', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Create storage policies for badge-images bucket
+create policy "Badge images are publicly accessible"
+  on storage.objects for select
+  using ( bucket_id = 'badge-images' );
+
+create policy "Only authenticated users can upload badge images"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'badge-images' AND
+    auth.role() = 'authenticated'
+  );
+
+-- Function to award badge to user
+create or replace function award_badge(
+    p_user_id uuid,
+    p_badge_id uuid
+)
+returns void as $$
+begin
+    insert into user_badges (user_id, badge_id)
+    values (p_user_id, p_badge_id)
+    on conflict (user_id, badge_id) do nothing;
+end;
+$$ language plpgsql;
+
+-- Function to award title to user
+create or replace function award_title(
+    p_user_id uuid,
+    p_title_id uuid
+)
+returns void as $$
+begin
+    insert into user_titles (user_id, title_id)
+    values (p_user_id, p_title_id)
+    on conflict (user_id, title_id) do nothing;
+end;
+$$ language plpgsql;
+
+-- Function to check and award achievement rewards
+create or replace function check_and_award_achievement_rewards(
+    p_user_id uuid,
+    p_achievement_id uuid
+)
+returns void as $$
+declare
+    v_reward record;
+begin
+    -- Get all rewards for the achievement
+    for v_reward in 
+        select * from achievement_rewards
+        where achievement_id = p_achievement_id
+    loop
+        -- Award badge if present
+        if v_reward.badge_id is not null then
+            perform award_badge(p_user_id, v_reward.badge_id);
+        end if;
+        
+        -- Award title if present
+        if v_reward.title_id is not null then
+            perform award_title(p_user_id, v_reward.title_id);
+        end if;
+        
+        -- Award XP if present
+        if v_reward.xp_reward is not null then
+            update profiles
+            set xp = xp + v_reward.xp_reward
+            where user_id = p_user_id;
+        end if;
+    end loop;
+end;
+$$ language plpgsql;
+
+-- Function to check and award quest rewards
+create or replace function check_and_award_quest_rewards(
+    p_user_id uuid,
+    p_quest_id uuid
+)
+returns void as $$
+declare
+    v_reward record;
+begin
+    -- Get all rewards for the quest
+    for v_reward in 
+        select * from quest_rewards
+        where quest_id = p_quest_id
+    loop
+        -- Award badge if present
+        if v_reward.badge_id is not null then
+            perform award_badge(p_user_id, v_reward.badge_id);
+        end if;
+        
+        -- Award title if present
+        if v_reward.title_id is not null then
+            perform award_title(p_user_id, v_reward.title_id);
+        end if;
+        
+        -- Award XP if present
+        if v_reward.xp_reward is not null then
+            update profiles
+            set xp = xp + v_reward.xp_reward
+            where user_id = p_user_id;
+        end if;
+    end loop;
+end;
+$$ language plpgsql;

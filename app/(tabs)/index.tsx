@@ -286,7 +286,7 @@ export default function DiscoverScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Discover</Text>
         <View style={styles.searchContainer}>
-          <FontAwesome5 name="search" size={16} color="#666" style={styles.searchIcon} />
+          <FontAwesome5 name="search" size={16} color="#B0B0B0" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search quests..."
@@ -305,14 +305,14 @@ export default function DiscoverScreen() {
             ]}
             onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
           >
-            <FontAwesome5 name="tags" size={14} color="#666" />
+            <FontAwesome5 name="tags" size={14} color="#B0B0B0" />
             <Text style={styles.categoryButtonText}>
               {getCategoryButtonText()}
             </Text>
             <FontAwesome5 
               name={showCategoryDropdown ? "chevron-up" : "chevron-down"} 
               size={12} 
-              color="#666" 
+              color="#B0B0B0" 
             />
           </TouchableOpacity>
           {renderCategoryDropdown()}
@@ -326,7 +326,7 @@ export default function DiscoverScreen() {
             <FontAwesome5 
               name="clock" 
               size={12} 
-              color={showDaily ? "#fff" : "#666"} 
+              color={showDaily ? "#fff" : "#B0B0B0"} 
             />
             <Text 
               style={[styles.filterText, showDaily && styles.filterTextActive]}
@@ -342,7 +342,7 @@ export default function DiscoverScreen() {
             <FontAwesome5 
               name="map-marker-alt" 
               size={12} 
-              color={showGeofenced ? "#fff" : "#666"} 
+              color={showGeofenced ? "#fff" : "#B0B0B0"} 
             />
             <Text 
               style={[styles.filterText, showGeofenced && styles.filterTextActive]}
@@ -382,7 +382,7 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#121212',
   },
   header: {
     padding: 20,
@@ -392,21 +392,26 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 16,
+    color: '#E0E0E0',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#1E1E1E',
     borderRadius: 12,
     paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   searchIcon: {
     marginRight: 8,
+    color: '#B0B0B0',
   },
   searchInput: {
     flex: 1,
     paddingVertical: 12,
     fontSize: 16,
+    color: '#E0E0E0',
   },
   filtersContainer: {
     paddingHorizontal: 20,
@@ -420,16 +425,18 @@ const styles = StyleSheet.create({
   categoryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#1E1E1E',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   categoryButtonText: {
     flex: 1,
     fontSize: 14,
-    color: '#666',
+    color: '#B0B0B0',
     fontWeight: '500',
   },
   filterButtons: {
@@ -442,15 +449,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#1E1E1E',
     gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   filterButtonActive: {
     backgroundColor: '#007AFF',
   },
   filterText: {
     fontSize: 14,
-    color: '#666',
+    color: '#B0B0B0',
     fontWeight: '500',
   },
   filterTextActive: {
@@ -464,14 +473,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     height: 200,
-    backgroundColor: '#fff',
+    backgroundColor: '#1E1E1E',
     borderLeftWidth: 6,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 3.84,
     elevation: 5,
   },
@@ -586,7 +595,7 @@ const styles = StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: '#1E1E1E',
     borderRadius: 12,
     marginTop: 8,
     shadowColor: '#000',
@@ -599,6 +608,8 @@ const styles = StyleSheet.create({
     elevation: 5,
     maxHeight: 300,
     zIndex: 1001,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   dropdownList: {
     padding: 8,
@@ -624,7 +635,7 @@ const styles = StyleSheet.create({
   },
   dropdownItemText: {
     fontSize: 16,
-    color: '#000',
+    color: '#E0E0E0',
   },
   dropdownItemTextSelected: {
     color: '#fff',
@@ -642,15 +653,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
+    backgroundColor: '#1E1E1E',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   emptyText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: '#B0B0B0',
   },
   emptySubtext: {
     marginTop: 8,
     fontSize: 14,
-    color: '#999',
+    color: '#808080',
   },
 });

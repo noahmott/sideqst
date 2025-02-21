@@ -50,8 +50,27 @@ export const questService = {
     }
   },
 
-  // Fetch a single quest with its steps
-  async fetchQuestDetails(questId: string): Promise<{ quest: Quest; steps: QuestStep[] }> {
+  // Fetch a single quest with its steps and rewards
+  async fetchQuestDetails(questId: string): Promise<{ 
+    quest: Quest; 
+    steps: QuestStep[];
+    rewards: {
+      xp_reward: number;
+      badge?: {
+        id: string;
+        title: string;
+        description: string;
+        image_url: string;
+        rarity: string;
+      };
+      title?: {
+        id: string;
+        title: string;
+        description: string;
+        rarity: string;
+      };
+    }[];
+  }> {
     try {
       const { data: quest, error: questError } = await supabase
         .from('quests')
@@ -72,7 +91,27 @@ export const questService = {
 
       if (stepsError) throw stepsError;
 
-      return { quest, steps: steps || [] };
+      // Fetch rewards with badge and title details
+      const { data: rewards, error: rewardsError } = await supabase
+        .from('quest_rewards')
+        .select(`
+          *,
+          badge:badges!quest_rewards_badge_id_fkey (*),
+          title:titles!quest_rewards_title_id_fkey (*)
+        `)
+        .eq('quest_id', questId);
+
+      if (rewardsError) throw rewardsError;
+
+      return { 
+        quest, 
+        steps: steps || [],
+        rewards: rewards?.map(reward => ({
+          xp_reward: reward.xp_reward,
+          badge: reward.badge,
+          title: reward.title
+        })) || []
+      };
     } catch (error) {
       console.error('Error fetching quest details:', error);
       throw error;

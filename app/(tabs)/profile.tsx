@@ -10,7 +10,8 @@ import {
   FlatList,
   Dimensions,
   ActivityIndicator,
-  Modal
+  Modal,
+  Alert
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { BlurView } from 'expo-blur';
@@ -63,14 +64,11 @@ export default function ProfileScreen() {
       setProfile(profileData);
 
       // Fetch quest submissions
-      const { data: submissionsData, error: submissionsError } = await supabase
+      const { data, error: submissionsError } = await supabase
         .from('quest_submissions')
         .select(`
-          id,
-          image_url,
-          caption,
-          created_at,
-          quest:quests (
+          *,
+          quest:quests!inner (
             title
           )
         `)
@@ -78,9 +76,20 @@ export default function ProfileScreen() {
         .order('created_at', { ascending: false });
 
       if (submissionsError) throw submissionsError;
-      setSubmissions(submissionsData || []);
 
-      // TODO: Fetch equipped badges and title once those tables are set up
+      // Transform the data with proper typing
+      const transformedSubmissions = (data || []).map(submission => {
+        const questTitle = typeof submission.quest === 'object' && submission.quest 
+          ? submission.quest.title 
+          : 'Unknown Quest';
+          
+        return {
+          ...submission,
+          quest: { title: questTitle }
+        };
+      });
+
+      setSubmissions(transformedSubmissions);
       
     } catch (error) {
       console.error('Error fetching profile data:', error);
@@ -321,7 +330,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#121212',
   },
   loadingContainer: {
     flex: 1,
@@ -342,47 +351,61 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    zIndex: 1,
-    padding: 8,
+    top: 60,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#2A2A2A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   header: {
+    padding: 20,
+    paddingTop: 60,
+    backgroundColor: '#1E1E1E',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
-    paddingTop: 48,
-    paddingHorizontal: 16,
   },
   avatarContainer: {
     position: 'relative',
     marginBottom: 16,
+    width: 120,
+    height: 120,
+    alignSelf: 'center',
+    padding: 3,
+    backgroundColor: '#007AFF',
+    borderRadius: 60,
   },
   avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: '#007AFF',
+    width: 114,
+    height: 114,
+    borderRadius: 57,
+    backgroundColor: '#2A2A2A',
   },
   avatarPlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#f0f0f0',
+    width: 114,
+    height: 114,
+    borderRadius: 57,
+    backgroundColor: '#2A2A2A',
     justifyContent: 'center',
     alignItems: 'center',
   },
   levelBadge: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
+    bottom: -4,
+    right: -4,
     width: 36,
     height: 36,
     borderRadius: 18,
     backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#1E1E1E',
   },
   levelText: {
     color: '#fff',
@@ -392,7 +415,9 @@ const styles = StyleSheet.create({
   username: {
     fontSize: 24,
     fontWeight: 'bold',
+    color: '#E0E0E0',
     marginBottom: 4,
+    textAlign: 'center',
   },
   title: {
     fontSize: 16,

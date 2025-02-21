@@ -33,6 +33,7 @@ export interface QuestStep {
   step_number: number;
   description: string;
   requires_check_in: boolean;
+  step_xp_reward: number;
   created_at: string;
 }
 
